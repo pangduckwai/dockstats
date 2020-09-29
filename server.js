@@ -14,6 +14,34 @@ const LOGLVL = {
 	'INFO': 1,
 }[process.argv.slice(2)[0]] || 0;
 
+/* Data structure:
+[
+  {
+    "date":"2020-09-28 18:05:39",
+    "[Container #1 Name]":{
+      "cpu":"0.00%",
+      "memu":"50.18MiB",
+      "memt":"7.779GiB",
+      "neti":"4.49MB",
+      "neto":"3.88MB",
+      "blki":"0B",
+      "blko":"0B",
+      "pids":"22"
+    },
+    "[Container #2 Name]":{
+      "cpu":"15.84%",
+      "memu":"291.2MiB",
+      "memt":"7.779GiB",
+      "neti":"25.5MB",
+      "neto":"15.1MB",
+      "blki":"0B",
+      "blko":"0B",
+      "pids":"42"
+		},
+		...
+  }
+]
+*/
 const COMMAND =
 'LINES=$(docker stats --no-stream | grep -v "CONTAINER"); ' +
 'echo "{ \\"date\\":\\"`date "+%Y-%m-%d %H:%M:%S"`\\""; ' +
@@ -23,8 +51,8 @@ const COMMAND =
 'echo "}"';
 
 const PORT = 54321;
-const RUN_INTERVAL = 60000;
-const DATA_POINTS = 1000;
+const RUN_INTERVAL = 120000;
+const DATA_POINTS = 10000;
 const DATA_FILE = 'data.json';
 
 let threadId;

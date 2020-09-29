@@ -19,28 +19,78 @@ const fetch = (url, callback) => {
 	xmlhttp.send();
 }
 
-/*
-Target structure:
+const getValue = (input) => {
+	const regex = /([0-9]+[.]?[0-9]*)([a-zA-Z%]*)/;
+	const groups = regex.exec(input);
+	const v = Number(groups[1]);
+	if (!groups[2])
+		return { v };
+	else {
+		switch (groups[2]) {
+			case '%':
+				return { v, m: 0.01, u: groups[2] };
+			case 'GiB':
+			case 'GB':
+				return { v, m: 1000000000, u: groups[2] };
+			case 'MiB':
+			case 'MB':
+				return { v, m: 1000000, u: groups[2] };
+			case 'KiB':
+			case 'kB':
+				return { v, m: 1000, u: groups[2] };
+			default:
+				return { v, u: groups[2] };
+		}
+	}
+};
+
+/* Transformed structure:
 {
 	cpu: {
-		tester: [{ date: '2020-11-22 22:33', '0%' }, ...],
-		rl-org1 ...
+		[Container #1 Name]: [["2020-09-28 18:05:39", "0.00%"], ["2020-09-28 18:07:39", "0.00%"], ["2020-09-28 18:09:39", "0.01%"], ...],
+		[Container #2 Name]: [["2020-09-28 18:05:39", "5.84%"], ["2020-09-28 18:07:39", "7.03%"], ["2020-09-28 18:09:39", "1.85%"], ...],
 		...
 	},
 	mem: {
-		tester...
+		[Container #1 Name]: [["2020-09-28 18:05:39", "50.18MiB", "7.779GiB"], ["2020-09-28 18:07:39", "53.55MiB", "7.779GiB"], ...],
+		[Container #2 Name]: [["2020-09-28 18:05:39", "291.2MiB", "7.779GiB"], ["2020-09-28 18:07:39", "292.8MiB", "7.779GiB"], ...],
+		...
+	},
+	net: {
+		[Container #1 Name]: [["2020-09-28 18:05:39", "4.49MB", "3.88MB"], ["2020-09-28 18:07:39", "7.25MB", "6.13MB"], ...],
+		[Container #2 Name]: [["2020-09-28 18:05:39", "16kB", "12.4kB"], ["2020-09-28 18:07:39", "16.3kB", "12.6kB"], ...],
+		...
+	},
+	blk: {
+		[Container #1 Name]: [["2020-09-28 18:05:39", "0B", "0B"], ["2020-09-28 18:07:39", "0B", "0B"], ...],
+		[Container #2 Name]: [["2020-09-28 18:05:39", "0B", "0B"], ["2020-09-28 18:07:39", "0B", "0B"], ...],
+		...
+	},
+	pids: {
+		[Container #1 Name]: [["2020-09-28 18:05:39", "22"], ["2020-09-28 18:07:39", "22"], ["2020-09-28 18:09:39", "22"]],
+		[Container #2 Name]: [["2020-09-28 18:05:39", "42"], ["2020-09-28 18:07:39", "42"], ["2020-09-28 18:09:39", "42"]],
+		...
 	}
 }
 */
 const analyzer = (data) => {
-	let temp = 0;
+	// let temp = 0;
+	let min = Number.MAX_VALUE;
+	let max = Number.MIN_VALUE;
+	const from = (data.length > 0) ? data[0].date : undefined;
+	const to = (data.length > 0) ? data[data.length - 1].date : undefined;
 	const result = {};
 	for (const datum of data) {
-		temp ++;
+		// temp ++;
 		const { date, ...stats } = datum;
 		const dat0 = {};
 		for (const stat of Object.entries(stats)) { // stat[0] container name, e.g. redis01, peer0-org2, ...
 			for (const val of Object.entries(stat[1])) { // val[0] measurement name, e.g. cpu, mem, ...
+				const value = getValue(val[1]);
+				if (value.v < min)
+					min = value.v;
+				else if (value.v > max)
+					max = value.v;
 				switch (val[0]) {
 					case 'memu':
 						if (!result['mem']) result['mem'] = {};
@@ -71,9 +121,9 @@ const analyzer = (data) => {
 				}
 			}
 		}
-		if (temp > 2) break;
+		// if (temp > 2) break;
 	}
-	return result;
+	return {min, max, from, to, ...result };
 };
 
 const render = (data) => {
