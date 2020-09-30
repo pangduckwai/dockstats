@@ -104,5 +104,6 @@ dist
 .tern-port
 
 data.json
+data.*.json
 stats.sh
 d3.min.js
